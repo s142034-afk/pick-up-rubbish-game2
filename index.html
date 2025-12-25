@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>SDGs 不塑永續 - 淨灘</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+ margin:0;
+ font-family:system-ui;
+ background:linear-gradient(#bfe9ff 40%,#7ed3ff 55%,#f4e2b3 100%);
+ overflow:hidden;
+}
+header{
+ text-align:center;
+ font-size:28px;
+ font-weight:800;
+ padding:10px;
+}
+.hud{
+ display:flex;
+ gap:10px;
+ justify-content:center;
+ flex-wrap:wrap;
+}
+.pill{
+ background:#fff;
+ padding:8px 14px;
+ border-radius:999px;
+ font-weight:700;
+}
+#timer.danger{
+ color:red;
+ animation:pulse .8s infinite;
+}
+@keyframes pulse{
+ 0%{transform:scale(1)}
+ 50%{transform:scale(1.2)}
+ 100%{transform:scale(1)}
+}
+#game{
+ position:relative;
+ height:70vh;
+}
+.item{
+ position:absolute;
+ font-size:32px;
+ cursor:pointer;
+ transition:.3s;
+}
+.big{
+ transform:scale(2);
+}
+#overlay{
+ position:absolute;
+ inset:0;
+ background:#0008;
+ display:none;
+ place-items:center;
+}
+.card{
+ background:#fff;
+ padding:20px;
+ border-radius:16px;
+ text-align:center;
+}
+#hint{
+ color:#0a7;
+ font-weight:800;
+}
+</style>
+</head>
+
+<body>
+<header>SDGs 不塑永續 - 淨灘</header>
+
+<div class="hud">
+ <div class="pill">Level <span id="lv">1</span>/3</div>
+ <div class="pill">Score: <span id="score">0</span></div>
+ <div class="pill">Time: <span id="timer">0</span>s</div>
+ <div class="pill">🐣 <span id="duck">0</span></div>
+ <div class="pill">💣 <span id="bomb">0</span></div>
+</div>
+
+<main id="game"></main>
+
+<div id="overlay">
+ <div class="card">
+  <h2 id="msg"></h2>
+  <p id="hint"></p>
+  <button onclick="next()">繼續</button>
+ </div>
+</div>
+
+<script>
+/* 關卡設定 */
+const LEVELS=[
+ {time:25, goal:150, duckSkip:30},
+ {time:15, goal:90,  duckSkip:26},
+ {time:10, goal:50,  duckSkip:999}
+];
+
+/* 原本 5 個垃圾 + 新項目 */
+const ITEMS=[
+ {type:"trash", icon:"🧴", point:2},
+ {type:"trash", icon:"🛍️", point:3},
+ {type:"trash", icon:"📦", point:3},
+ {type:"trash", icon:"🥤", point:2},
+ {type:"trash", icon:"🪨", point:1},
+ {type:"duck",  icon:"🐣", point:8},
+ {type:"bomb",  icon:"💣", point:-10}
+];
+
+let level=0, score=0, duck=0, bomb=0;
+let time=0, timerId=null;
+
+const game=document.getElementById("game");
+const scoreEl=document.getElementById("score");
+const duckEl=document.getElementById("duck");
+const bombEl=document.getElementById("bomb");
+const timerEl=document.getElementById("timer");
+const lvEl=document.getElementById("lv");
+const overlay=document.getElementById("overlay");
+const msg=document.getElementById("msg");
+const hint=document.getElementById("hint");
+
+function start(){
+ clearInterval(timerId);
+ game.innerHTML="";
+ score=duck=bomb=0;
+ scoreEl.textContent=duckEl.textContent=bombEl.textContent=0;
+ lvEl.textContent=level+1;
+ overlay.style.display="none";
+ hint.textContent="";
+
+ time=LEVELS[level].time;
+ timerEl.textContent=time;
+ timerEl.classList.remove("danger");
+
+ timerId=setInterval(()=>{
+   time--;
+   timerEl.textContent=time;
+   if(time<=5) timerEl.classList.add("danger");
+   if(time<=0){
+     end(false);
+   }
+ },1000);
+
+ for(let i=0;i<140;i++){
+  const it=ITEMS[Math.floor(Math.random()*ITEMS.length)];
+  const d=document.createElement("div");
+  d.className="item";
+  d.textContent=it.icon;
+  d.style.left=Math.random()*90+"%";
+  d.style.top=(50+Math.random()*40)+"%";
+
+  d.onclick=()=>{
+   if(it.type==="duck"){
+     duck++;
+     score+=8;
+     hint.textContent="恭喜你 save a duck 🎉";
+     if(duck>=LEVELS[level].duckSkip){
+       end(true,true);
+       return;
+     }
+   }
+   else if(it.type==="bomb"){
+     bomb++;
+     score-=10;
+     if(bomb>=3){
+       explode();
+       return;
+     }
+   }
+   else{
+     score+=it.point;
+   }
+
+   scoreEl.textContent=score;
+   duckEl.textContent=duck;
+   bombEl.textContent=bomb;
+   d.remove();
+
+   if(score>=LEVELS[level].goal){
+     end(true,false);
+   }
+  };
+  game.appendChild(d);
+ }
+}
+
+function explode(){
+ clearInterval(timerId);
+ score=0;
+ bomb=0;
+ scoreEl.textContent=bombEl.textContent=0;
+ document.querySelectorAll(".item").forEach(i=>i.classList.add("big"));
+ msg.textContent="💥 大爆炸 💥";
+ hint.textContent="分數歸零";
+ overlay.style.display="grid";
+}
+
+function end(win,skip=false){
+ clearInterval(timerId);
+ overlay.style.display="grid";
+ if(win){
+   msg.textContent= skip ? "隱藏關卡啟動！" : "過關成功！";
+ }else{
+   msg.textContent="時間到！失敗";
+ }
+}
+
+function next(){
+ overlay.style.display="none";
+ if(score>=LEVELS[level].goal || duck>=LEVELS[level].duckSkip){
+   if(level<2) level++;
+ }
+ start();
+}
+
+start();
+</script>
+</body>
+</html>
